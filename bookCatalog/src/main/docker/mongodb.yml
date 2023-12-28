@@ -1,0 +1,14 @@
+networks:
+  net1:
+    external:
+      name: net1
+version: '2'
+services:
+  bookcatalog-mongodb:
+    image: mongo:4.2.7
+    ports:
+      - '27017:27017'
+    networks:
+      - net1
+    # volumes:
+    #     - ~/volumes/jhipster/bookCatalog/mongodb/:/data/db/

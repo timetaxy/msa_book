@@ -1,0 +1,157 @@
+# jhipster
+version: '2'
+# networks:
+#   net1:
+#     driver: bridge
+services:
+  jhipster-registry:
+    image: jhipster/jhipster-registry:v6.2.0
+    # network_mode: host
+    # platform: linux/amd64
+    volumes:
+      - ./gateway/src/main/docker/central-server-config:/central-config
+    # When run with the "dev" Spring profile, the JHipster Registry will
+    # read the config from the local filesystem (central-server-config directory)
+    # When run with the "prod" Spring profile, it will read the configuration from a Git repository
+    # See https://www.jhipster.tech/jhipster-registry/#spring-cloud-config
+    environment:
+      - _JAVA_OPTIONS=-Xmx512m -Xms256m
+      - SPRING_PROFILES_ACTIVE=dev,swagger
+      - SPRING_SECURITY_USER_PASSWORD=admin
+      - JHIPSTER_REGISTRY_PASSWORD=admin
+      - SPRING_CLOUD_CONFIG_SERVER_COMPOSITE_0_TYPE=native
+      - SPRING_CLOUD_CONFIG_SERVER_COMPOSITE_0_SEARCH_LOCATIONS=file:./central-config/localhost-config/
+      # - SPRING_CLOUD_CONFIG_SERVER_COMPOSITE_0_TYPE=git
+      # - SPRING_CLOUD_CONFIG_SERVER_COMPOSITE_0_URI=https://github.com/jhipster/jhipster-registry/
+      # - SPRING_CLOUD_CONFIG_SERVER_COMPOSITE_0_SEARCH_PATHS=central-config
+    ports:
+      - 8761:8761
+    # links:
+    #   - jhipster-registry
+    # networks:
+    #   - net1
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:5.5.0
+    # network_mode: host
+    depends_on:
+      - jhipster-registry
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      # ZOOKEEPER_URL: 127.0.0.1:2181
+    # links:
+    #   - jhipster-registry
+    # networks:
+    #   - net1
+
+  kafka:
+    image: confluentinc/cp-kafka:5.5.0
+    # network_mode: host
+    depends_on:
+      - jhipster-registry
+      - zookeeper
+    ports:
+      - 9092:9092
+    # links:
+    #   - gateway
+    #   - zookeeper
+    environment:
+      # KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      # KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # KAFKA_ZOOKEEPER_CONNECT: 127.0.0.1:2181
+      # KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    # networks:
+    #   - net1
+
+  bookcatalog-mongodb:
+    image: mongo:4.2.7
+    # network_mode: host
+    depends_on:
+      - jhipster-registry
+    ports:
+      - 27017:27017
+    # links:
+    #   - jhipster-registry
+    # networks:
+    #   - net1
+    # volumes:
+    #     - ~/volumes/jhipster/bookCatalog/mongodb/:/data/db/
+
+  gateway:
+    # build: ./gateway
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+      args:
+        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    # network_mode: host
+    depends_on:
+      - jhipster-registry
+    ports:
+      - 8080:8080
+    links:
+    #   - jhipster-registry
+      - kafka
+    #   - bookcatalog-mongodb
+    # environment:
+      # KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+      # KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    # volumes:
+    #   - .:/app
+    # command: ["./mvnw"]
+    # networks:
+    #   - net1
+
+  book:
+    build: ./book
+    # network_mode: host
+    depends_on:
+      - jhipster-registry
+    ports:
+      - 8081:8081
+    # links:
+    #   - jhipster-registry
+    # volumes:
+    #   - .:/app
+    # command: ["./mvnw"]
+    # networks:
+    #   - net1
+
+  bookcatalog:
+    build: ./bookCatalog
+    # network_mode: host
+    depends_on:
+      - jhipster-registry
+    ports:
+      - 8082:8082
+    # links:
+    #   - jhipster-registry
+    # volumes:
+    #   - .:/app
+    # command: ["./mvnw"]
+    # networks:
+    #   - net1
+
+  rental:
+    build: ./rental
+    # network_mode: host
+    depends_on:
+      - jhipster-registry
+    ports:
+      - 8083:8083
+    # links:
+    #   - jhipster-registry
+    # volumes:
+    #   - .:/app
+    # command: ["./mvnw"]
+    # networks:
+    #   - net1
+
